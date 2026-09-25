@@ -7,6 +7,7 @@ from app.routers import users
 from app.routers import categories
 from app.routers import service_requests
 from app.routers import comments
+from app.routers import attachments
 
 # Creating FastAPI app instance
 app = FastAPI(title=settings.APP_NAME)
@@ -15,6 +16,7 @@ app.include_router(users.router)
 app.include_router(categories.router)
 app.include_router(service_requests.router)
 app.include_router(comments.router)
+app.include_router(attachments.router)
 
 
 def on_startup() -> None:
