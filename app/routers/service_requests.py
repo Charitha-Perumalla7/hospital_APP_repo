@@ -14,18 +14,20 @@
 # UUID string "id" instead of relying on MongoDB's ObjectId.
 
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.collection import Collection
 
 from app.dependencies import (
     get_service_requests_collection,
     get_categories_collection,
     get_users_collection,
+    get_audit_logs_collection,
 )
 from app.models.service_request import Service_request_Status, is_valid_transition
+from app.models.audit_log import AuditAction, build_audit_log_doc
 from app.schemas.service_request import (
     Service_request_Create,
     Service_request_Update,
@@ -43,6 +45,7 @@ def create_service_request(
     service_requests_collection: Collection = Depends(get_service_requests_collection),
     categories_collection: Collection = Depends(get_categories_collection),
     users_collection: Collection = Depends(get_users_collection),
+    audit_logs_collection: Collection = Depends(get_audit_logs_collection),
 ):
     """
     Create a new ticket.
@@ -75,17 +78,47 @@ def create_service_request(
         "updated_at": now,
     }
     service_requests_collection.insert_one(service_request_doc)
+    # Record this creation in the audit trail.
+    audit_logs_collection.insert_one(
+        build_audit_log_doc(
+            service_request_id=service_request_doc["id"],
+            action=AuditAction.CREATED,
+            performed_by=payload.created_by,
+            details=f"Service request created with status '{Service_request_Status.NEW.value}'.",
+        )
+    )
     return service_request_doc
 
 
 @router.get("", response_model=List[Service_request_Response])
-def list_service_request(service_requests_collection: Collection = Depends(get_service_requests_collection)):
+def list_service_requests(
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
+    # --- Query parameters: all optional, used to filter/control the request ---
+    status_filter: Optional[Service_request_Status] = Query(default=None, alias="status", description="Filter by exact status"),
+    category_id: Optional[str] = Query(default=None, description="Filter by category id"),
+    assigned_to: Optional[str] = Query(default=None, description="Filter by assigned technician's user id"),
+    created_by: Optional[str] = Query(default=None, description="Filter by the employee who raised the service_request"),
+    skip: int = Query(default=0, ge=0, description="Number of service_requests to skip (for pagination)"),
+    limit: int = Query(default=20, ge=1, le=100, description="Max number of service_requests to return (1-100)"),
+):
     """
     List all tickets.
     GET -> read, per REST convention.
     (Query-parameter filtering, e.g. by status/category, is added in Sub-phase 1.9.)
     """
-    return list(service_requests_collection.find())
+        # Build the MongoDB filter dict from whichever query parameters were actually provided.
+    mongo_filter = {}
+    if status_filter is not None:
+        mongo_filter["status"] = status_filter
+    if category_id is not None:
+        mongo_filter["category_id"] = category_id
+    if assigned_to is not None:
+        mongo_filter["assigned_to"] = assigned_to
+    if created_by is not None:
+        mongo_filter["created_by"] = created_by
+
+    cursor = tickets_collection.find(mongo_filter).sort("created_at", -1).skip(skip).limit(limit)
+    return list(cursor)
 
 
 @router.get("/{service_request_id}", response_model=Service_request_Response)
@@ -106,6 +139,7 @@ def update_service_request(
     payload: Service_request_Update,
     service_requests_collection: Collection = Depends(get_service_requests_collection),
     categories_collection: Collection = Depends(get_categories_collection),
+    
 ):
     """
     Update ticket details (title/description/category) only.
@@ -137,6 +171,7 @@ def assign_service_request(
     payload: Service_request_Assign,
     service_requests_collection: Collection = Depends(get_service_requests_collection),
     users_collection: Collection = Depends(get_users_collection),
+    audit_logs_collection: Collection = Depends(get_audit_logs_collection),
 ):
     """
     Assign or reassign a technician to a ticket (Team Lead responsibility).
@@ -156,13 +191,31 @@ def assign_service_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="assigned_to does not match any existing user.",
         )
+    if not users_collection.find_one({"id": payload.assigned_by}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="assigned_by does not match any existing user.",
+        )
 
     update_data = {"assigned_to": payload.assigned_to, "updated_at": datetime.utcnow()}
 
-    if existing["status"] == Service_request_Status.NEW:
+    status_also_changed = existing["status"] == Service_requestStatus.NEW
+    if status_also_changed:
         update_data["status"] = Service_request_Status.ASSIGNED
 
     service_requests_collection.update_one({"id": service_request_id}, {"$set": update_data})
+    # Record this assignment in the audit trail.
+    details = f"Assigned to user '{payload.assigned_to}'."
+    if status_also_changed:
+        details += f" Status moved from '{Service_request_Status.NEW.value}' to '{Service_requestStatus.ASSIGNED.value}'."
+    audit_logs_collection.insert_one(
+        build_audit_log_doc(
+            service_request_id=service_request_id,
+            action=AuditAction.ASSIGNED,
+            performed_by=payload.assigned_by,
+            details=details,
+        )
+    )
     return service_requests_collection.find_one({"id": service_request_id})
 
 
@@ -171,6 +224,8 @@ def update_service_request_status(
     service_request_id: str,
     payload: Service_request_StatusUpdate,
     service_requests_collection: Collection = Depends(get_service_requests_collection),
+    users_collection: Collection = Depends(get_users_collection),
+    audit_logs_collection: Collection = Depends(get_audit_logs_collection),
 ):
     """
     Move a ticket through its lifecycle.
@@ -181,6 +236,12 @@ def update_service_request_status(
     existing = service_requests_collection.find_one({"id": service_request_id})
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
+
+    if not users_collection.find_one({"id": payload.changed_by}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="changed_by does not match any existing user.",
+        )
 
     current_status = Service_request_Status(existing["status"])
     new_status = payload.status
@@ -194,6 +255,16 @@ def update_service_request_status(
     service_requests_collection.update_one(
         {"id": service_request_id},
         {"$set": {"status": new_status, "updated_at": datetime.utcnow()}},
+    )
+
+    # Record this status change in the audit trail.
+    audit_logs_collection.insert_one(
+        build_audit_log_doc(
+            service_request_id=service_request_id,
+            action=AuditAction.STATUS_CHANGED,
+            performed_by=payload.changed_by,
+            details=f"Status changed from '{current_status.value}' to '{new_status.value}'.",
+        )
     )
     return service_requests_collection.find_one({"id": service_request_id})
 
