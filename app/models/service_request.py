@@ -25,7 +25,7 @@
 from enum import Enum
 
 
-class TicketStatus(str, Enum):
+class Service_request_Status(str, Enum):
     """The fixed set of statuses a ticket can be in."""
     NEW = "new"
     ASSIGNED = "assigned"
@@ -44,17 +44,17 @@ class TicketStatus(str, Enum):
 # (the status-transition endpoint) to reject illegal jumps, e.g. going
 # straight from NEW to RESOLVED, or moving out of CLOSED.
 # ---------------------------------------------------------------------------
-ALLOWED_TRANSITIONS: dict[TicketStatus, set[TicketStatus]] = {
-    TicketStatus.NEW: {TicketStatus.ASSIGNED},
-    TicketStatus.ASSIGNED: {TicketStatus.IN_PROGRESS},
-    TicketStatus.IN_PROGRESS: {TicketStatus.ON_HOLD, TicketStatus.RESOLVED},
-    TicketStatus.ON_HOLD: {TicketStatus.IN_PROGRESS},
-    TicketStatus.RESOLVED: {TicketStatus.CLOSED},
-    TicketStatus.CLOSED: set(),  # CLOSED is terminal — no further transitions allowed
+ALLOWED_TRANSITIONS: dict[Service_request_Status, set[Service_request_Status]] = {
+    Service_request_Status.NEW: {Service_request_Status.ASSIGNED},
+    Service_request_Status.ASSIGNED: {Service_request_Status.IN_PROGRESS},
+    Service_request_Status.IN_PROGRESS: {Service_request_Status.ON_HOLD, Service_request_Status.RESOLVED},
+    Service_request_Status.ON_HOLD: {Service_request_Status.IN_PROGRESS},
+    Service_request_Status.RESOLVED: {Service_request_Status.CLOSED},
+    Service_request_Status.CLOSED: set(),  # CLOSED is terminal — no further transitions allowed
 }
 
 
-def is_valid_transition(current_status: TicketStatus, new_status: TicketStatus) -> bool:
+def is_valid_transition(current_status: Service_request_Status, new_status: Service_request_Status) -> bool:
     """
     Custom application-specific rule: is moving from current_status to
     new_status allowed by the ticket lifecycle?

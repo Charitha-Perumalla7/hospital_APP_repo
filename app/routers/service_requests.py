@@ -21,26 +21,26 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.collection import Collection
 
 from app.dependencies import (
-    get_tickets_collection,
+    get_service_requests_collection,
     get_categories_collection,
     get_users_collection,
 )
-from app.models.ticket import TicketStatus, is_valid_transition
-from app.schemas.ticket import (
-    TicketCreate,
-    TicketUpdate,
-    TicketAssign,
-    TicketStatusUpdate,
-    TicketResponse,
+from app.models.service_request import Service_request_Status, is_valid_transition
+from app.schemas.service_request import (
+    Service_request_Create,
+    Service_request_Update,
+    Service_request_Assign,
+    Service_request_StatusUpdate,
+    Service_request_Response,
 )
 
-router = APIRouter(prefix="/tickets", tags=["Tickets"])
+router = APIRouter(prefix="/service_request", tags=["Service_request"])
 
 
-@router.post("", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
-def create_ticket(
-    payload: TicketCreate,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.post("", response_model=Service_request_Response, status_code=status.HTTP_201_CREATED)
+def create_service_request(
+    payload: Service_request_Create,
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
     categories_collection: Collection = Depends(get_categories_collection),
     users_collection: Collection = Depends(get_users_collection),
 ):
@@ -68,43 +68,43 @@ def create_ticket(
         "title": payload.title,
         "description": payload.description,
         "category_id": payload.category_id,
-        "status": TicketStatus.NEW,
+        "status": Service_request_Status.NEW,
         "created_by": payload.created_by,
         "assigned_to": None,
         "created_at": now,
         "updated_at": now,
     }
-    tickets_collection.insert_one(ticket_doc)
-    return ticket_doc
+    service_requests_collection.insert_one(service_request_doc)
+    return service_request_doc
 
 
-@router.get("", response_model=List[TicketResponse])
-def list_tickets(tickets_collection: Collection = Depends(get_tickets_collection)):
+@router.get("", response_model=List[Service_request_Response])
+def list_service_request(service_requests_collection: Collection = Depends(get_service_requests_collection)):
     """
     List all tickets.
     GET -> read, per REST convention.
     (Query-parameter filtering, e.g. by status/category, is added in Sub-phase 1.9.)
     """
-    return list(tickets_collection.find())
+    return list(service_requests_collection.find())
 
 
-@router.get("/{ticket_id}", response_model=TicketResponse)
-def get_ticket(
-    ticket_id: str,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.get("/{service_request_id}", response_model=Service_request_Response)
+def get_service_request(
+    service_request_id: str,
+    service_request_collection: Collection = Depends(get_service_requests_collection) #check this line
 ):
     """Get a single ticket by id ("ticket_id" is a path parameter)."""
-    ticket_doc = tickets_collection.find_one({"id": ticket_id})
-    if not ticket_doc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
-    return ticket_doc
+    service_request_doc = service_requests_collection.find_one({"id": service_request_id})
+    if not service_request_doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
+    return service_request_doc
 
 
-@router.put("/{ticket_id}", response_model=TicketResponse)
-def update_ticket(
-    ticket_id: str,
-    payload: TicketUpdate,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.put("/{service_request_id}", response_model=Service_request_Response)
+def update_service_request(
+    service_request_id: str,
+    payload: Service_request_Update,
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
     categories_collection: Collection = Depends(get_categories_collection),
 ):
     """
@@ -112,9 +112,9 @@ def update_ticket(
     Status and assignment are changed through their own dedicated endpoints
     below, so this endpoint deliberately does not touch them.
     """
-    existing = tickets_collection.find_one({"id": ticket_id})
+    existing = service_requests_collection.find_one({"id": service_request_id})
     if not existing:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
 
     update_data = payload.model_dump(exclude_unset=True)
     if not update_data:
@@ -127,15 +127,15 @@ def update_ticket(
         )
 
     update_data["updated_at"] = datetime.utcnow()
-    tickets_collection.update_one({"id": ticket_id}, {"$set": update_data})
-    return tickets_collection.find_one({"id": ticket_id})
+    service_requests_collection.update_one({"id": service_request_id}, {"$set": update_data})
+    return service_requests_collection.find_one({"id": service_request_id})
 
 
-@router.patch("/{ticket_id}/assign", response_model=TicketResponse)
-def assign_ticket(
-    ticket_id: str,
-    payload: TicketAssign,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.patch("/{service_request_id}/assign", response_model=Service_request_Response)
+def assign_service_request(
+    service_request_id: str,
+    payload: Service_request_Assign,
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
     users_collection: Collection = Depends(get_users_collection),
 ):
     """
@@ -147,9 +147,9 @@ def assign_ticket(
     and leave the current status untouched — reassignment shouldn't reset
     progress that's already been made.
     """
-    existing = tickets_collection.find_one({"id": ticket_id})
+    existing = service_requests_collection.find_one({"id": service_request_id})
     if not existing:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
 
     if not users_collection.find_one({"id": payload.assigned_to}):
         raise HTTPException(
@@ -159,18 +159,18 @@ def assign_ticket(
 
     update_data = {"assigned_to": payload.assigned_to, "updated_at": datetime.utcnow()}
 
-    if existing["status"] == TicketStatus.NEW:
-        update_data["status"] = TicketStatus.ASSIGNED
+    if existing["status"] == Service_request_Status.NEW:
+        update_data["status"] = Service_request_Status.ASSIGNED
 
-    tickets_collection.update_one({"id": ticket_id}, {"$set": update_data})
-    return tickets_collection.find_one({"id": ticket_id})
+    service_requests_collection.update_one({"id": service_request_id}, {"$set": update_data})
+    return service_requests_collection.find_one({"id": service_request_id})
 
 
-@router.patch("/{ticket_id}/status", response_model=TicketResponse)
-def update_ticket_status(
-    ticket_id: str,
-    payload: TicketStatusUpdate,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.patch("/{service_request_id}/status", response_model=Service_request_Response)
+def update_service_request_status(
+    service_request_id: str,
+    payload: Service_request_StatusUpdate,
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
 ):
     """
     Move a ticket through its lifecycle.
@@ -178,33 +178,33 @@ def update_ticket_status(
     e.g. a ticket cannot jump straight from NEW to RESOLVED, and nothing
     can leave CLOSED once it gets there.
     """
-    existing = tickets_collection.find_one({"id": ticket_id})
+    existing = service_requests_collection.find_one({"id": service_request_id})
     if not existing:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
 
-    current_status = TicketStatus(existing["status"])
+    current_status = Service_request_Status(existing["status"])
     new_status = payload.status
 
     if not is_valid_transition(current_status, new_status):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot move ticket from '{current_status.value}' to '{new_status.value}'.",
+            detail=f"Cannot move service request from '{current_status.value}' to '{new_status.value}'.",
         )
 
-    tickets_collection.update_one(
-        {"id": ticket_id},
+    service_requests_collection.update_one(
+        {"id": service_request_id},
         {"$set": {"status": new_status, "updated_at": datetime.utcnow()}},
     )
-    return tickets_collection.find_one({"id": ticket_id})
+    return service_requests_collection.find_one({"id": service_request_id})
 
 
-@router.delete("/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_ticket(
-    ticket_id: str,
-    tickets_collection: Collection = Depends(get_tickets_collection),
+@router.delete("/{service_request_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_service_request(
+    service_request_id: str,
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
 ):
     """Delete a ticket by id. DELETE -> remove, per REST convention."""
-    result = tickets_collection.delete_one({"id": ticket_id})
+    result = service_requests_collection.delete_one({"id": service_request_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service request not found")
     return None

@@ -20,7 +20,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.ticket import TicketStatus
+from app.models.service_request import Service_request_Status
 
 
 class TicketCreate(BaseModel):
@@ -29,7 +29,7 @@ class TicketCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=150, description="Short summary of the issue")
     description: str = Field(..., min_length=5, max_length=2000, description="Full details of the issue")
     category_id: str = Field(..., description="id of an existing Category")
-    created_by: str = Field(..., description="id of the Employee raising this ticket")
+    created_by: str = Field(..., description="id of the Department Staff raising this ticket")
 
     @field_validator("title", "description")
     @classmethod
@@ -44,7 +44,7 @@ class TicketCreate(BaseModel):
         return value.strip()
 
 
-class TicketUpdate(BaseModel):
+class Service_request_Update(BaseModel):
     """
     Edit ticket details (NOT status or assignment — those have their own
     dedicated endpoints/schemas below). All fields Optional.
@@ -55,13 +55,13 @@ class TicketUpdate(BaseModel):
     category_id: Optional[str] = Field(default=None)
 
 
-class TicketAssign(BaseModel):
+class Service_request_Assign(BaseModel):
     """Used by a Team Lead to assign or reassign a technician to a ticket."""
 
     assigned_to: str = Field(..., description="id of the Support Engineer to assign")
 
 
-class TicketStatusUpdate(BaseModel):
+class Service_request_StatusUpdate(BaseModel):
     """
     Used to move a ticket through its lifecycle.
     Note: this schema only checks that "status" is one of the valid enum
@@ -71,7 +71,7 @@ class TicketStatusUpdate(BaseModel):
     app.models.ticket.is_valid_transition().
     """
 
-    status: TicketStatus = Field(..., description="The status to move this ticket to")
+    status: Service_request_Status = Field(..., description="The status to move this Service request to")
 
 
 class TicketResponse(BaseModel):
@@ -81,7 +81,7 @@ class TicketResponse(BaseModel):
     title: str
     description: str
     category_id: str
-    status: TicketStatus
+    status: Service_request_Status
     created_by: str
     assigned_to: Optional[str] = None
     created_at: datetime

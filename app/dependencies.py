@@ -38,9 +38,9 @@ def get_categories_collection(db: Database = Depends(get_db)) -> Collection:
     return db["categories"]
 
 
-def get_ServiceRequest_collection(db: Database = Depends(get_db)) -> Collection:
+def get_service_requests_collection(db: Database = Depends(get_db)) -> Collection:
     """Provides access to the 'tickets' collection."""
-    return db["ServiceRequest"]
+    return db["service_request"]
 
 
 def get_comments_collection(db: Database = Depends(get_db)) -> Collection:
