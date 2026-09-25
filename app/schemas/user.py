@@ -21,7 +21,7 @@ class UserCreate(BaseModel):
 
     # Optional field with a default value: if the client doesn't send "role",
     # every new user defaults to the lowest-privilege role.
-    role: UserRole = Field(default=UserRole.EMPLOYEE, description="One of: employee, support_engineer, team_lead, admin")
+    role: UserRole = Field(default=UserRole.DEPARTMENT_STAFF, description="One of: department_staff, support_engineer, team_lead, admin")
 
 
 class UserUpdate(BaseModel):

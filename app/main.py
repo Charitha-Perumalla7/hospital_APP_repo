@@ -5,12 +5,14 @@ from app.config import settings
 from app.database import ping_database
 from app.routers import users
 from app.routers import categories
+from app.routers import service_requests
 
 # Creating FastAPI app instance
 app = FastAPI(title=settings.APP_NAME)
 
 app.include_router(users.router)
 app.include_router(categories.router)
+app.include_router(service_requests.router)
 
 
 def on_startup() -> None:

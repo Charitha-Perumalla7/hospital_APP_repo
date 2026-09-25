@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.models.service_request import Service_request_Status
 
 
-class TicketCreate(BaseModel):
+class Service_request_Create(BaseModel):
     """Data required from the client when raising a new ticket (POST /tickets)."""
 
     title: str = Field(..., min_length=3, max_length=150, description="Short summary of the issue")
@@ -74,7 +74,7 @@ class Service_request_StatusUpdate(BaseModel):
     status: Service_request_Status = Field(..., description="The status to move this Service request to")
 
 
-class TicketResponse(BaseModel):
+class Service_request_Response(BaseModel):
     """Shape of a ticket as returned by the API."""
 
     id: str
