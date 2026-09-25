@@ -69,7 +69,7 @@ def create_comment(
 def list_comments(
     service_request_id: str,
     comments_collection: Collection = Depends(get_comments_collection),
-    service_requests_collection: Collection = Depends(service_requests_collection),
+    service_requests_collection: Collection = Depends(get_service_requests_collection),
 ):
     """List all comments on a ticket, oldest first. GET -> read, per REST convention."""
     _get_service_request_or_404(service_request_id, service_requests_collection)
