@@ -6,10 +6,10 @@ import { NavLink } from 'react-router-dom'
 export default function NavBar() {
   return (
     <nav className="navbar navbar-expand navbar-dark bg-dark px-3">
-      <span className="navbar-brand fw-bold">IT Service Desk</span>
+      <span className="navbar-brand fw-bold">Hospital Support System</span>
       <div className="navbar-nav">
         {[
-          ['/tickets', 'Tickets'],
+          ['/service_requests', 'Service Requests'],
           ['/users', 'Users'],
           ['/categories', 'Categories'],
           ['/audit-logs', 'Audit Logs'],

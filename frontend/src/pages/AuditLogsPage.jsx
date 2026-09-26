@@ -1,6 +1,3 @@
-// src/pages/AuditLogsPage.jsx
-// Shows the system-wide audit log (all tickets), newest first.
-// Read-only — no create/update/delete, matching the backend design.
 import { useEffect, useState } from 'react'
 import { getAllAuditLogs } from '../api/client'
 
@@ -26,7 +23,7 @@ export default function AuditLogsPage() {
             {logs.map(log => (
               <tr key={log.id}>
                 <td><span className="badge bg-info text-dark">{log.action}</span></td>
-                <td><code>{log.ticket_id.slice(0, 8)}…</code></td>
+                <td><code>{log.service_request_id.slice(0, 8)}…</code></td>
                 <td><code>{log.performed_by.slice(0, 8)}…</code></td>
                 <td>{log.details}</td>
                 <td><small>{new Date(log.created_at).toLocaleString()}</small></td>

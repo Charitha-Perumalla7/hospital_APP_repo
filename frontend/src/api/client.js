@@ -29,24 +29,57 @@ export const getCategories = () => request('GET', '/categories')
 export const createCategory = (body) => request('POST', '/categories', body)
 export const deleteCategory = (id) => request('DELETE', `/categories/${id}`)
 
-// --- Tickets ---
-export const getTickets = (params = '') => request('GET', `/tickets${params}`)
-export const getTicket = (id) => request('GET', `/tickets/${id}`)
-export const createTicket = (body) => request('POST', '/tickets', body)
-export const deleteTicket = (id) => request('DELETE', `/tickets/${id}`)
-export const assignTicket = (id, body) => request('PATCH', `/tickets/${id}/assign`, body)
-export const updateTicketStatus = (id, body) => request('PATCH', `/tickets/${id}/status`, body)
+// --- Service Requests ---
+export const getServiceRequests = (params = '') =>
+  request('GET', `/service_requests${params}`)
+
+export const getServiceRequest = (id) =>
+  request('GET', `/service_requests/${id}`)
+
+export const createServiceRequest = (body) =>
+  request('POST', '/service_requests', body)
+
+export const deleteServiceRequest = (id) =>
+  request('DELETE', `/service_requests/${id}`)
+
+export const assignServiceRequest = (id, body) =>
+  request('PATCH', `/service_requests/${id}/assign`, body)
+
+export const updateServiceRequestStatus = (id, body) =>
+  request('PATCH', `/service_requests/${id}/status`, body)
 
 // --- Comments ---
-export const getComments = (ticketId) => request('GET', `/tickets/${ticketId}/comments`)
-export const createComment = (ticketId, body) => request('POST', `/tickets/${ticketId}/comments`, body)
-export const deleteComment = (ticketId, commentId) => request('DELETE', `/tickets/${ticketId}/comments/${commentId}`)
+export const getComments = (serviceRequestId) =>
+  request('GET', `/service_requests/${serviceRequestId}/comments`)
+
+export const createComment = (serviceRequestId, body) =>
+  request('POST', `/service_requests/${serviceRequestId}/comments`, body)
+
+export const deleteComment = (serviceRequestId, commentId) =>
+  request(
+    'DELETE',
+    `/service_requests/${serviceRequestId}/comments/${commentId}`
+  )
 
 // --- Attachments ---
-export const getAttachments = (ticketId) => request('GET', `/tickets/${ticketId}/attachments`)
-export const createAttachment = (ticketId, body) => request('POST', `/tickets/${ticketId}/attachments`, body)
-export const deleteAttachment = (ticketId, attachmentId) => request('DELETE', `/tickets/${ticketId}/attachments/${attachmentId}`)
+export const getAttachments = (serviceRequestId) =>
+  request('GET', `/service_requests/${serviceRequestId}/attachments`)
+
+export const createAttachment = (serviceRequestId, body) =>
+  request('POST', `/service_requests/${serviceRequestId}/attachments`, body)
+
+export const deleteAttachment = (serviceRequestId, attachmentId) =>
+  request(
+    'DELETE',
+    `/service_requests/${serviceRequestId}/attachments/${attachmentId}`
+  )
 
 // --- Audit Logs ---
-export const getAllAuditLogs = () => request('GET', '/audit-logs')
-export const getTicketAuditLogs = (ticketId) => request('GET', `/tickets/${ticketId}/audit-logs`)
+export const getAllAuditLogs = () =>
+  request('GET', '/audit-logs')
+
+export const getServiceRequestAuditLogs = (serviceRequestId) =>
+  request(
+    'GET',
+    `/service_requests/${serviceRequestId}/audit-logs`
+  )

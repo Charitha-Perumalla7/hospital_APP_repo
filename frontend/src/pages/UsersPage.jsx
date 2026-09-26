@@ -4,9 +4,9 @@
 import { useEffect, useState } from 'react'
 import { getUsers, createUser, deleteUser } from '../api/client'
 
-const ROLES = ['employee', 'support_engineer', 'team_lead', 'admin']
+const ROLES = ['department_staff', 'support_engineer', 'team_lead', 'admin']
 
-const blank = { name: '', email: '', password: '', role: 'employee' }
+const blank = { name: '', email: '', password: '', role: 'department_staff' }
 
 export default function UsersPage() {
   const [users, setUsers] = useState([])
